@@ -59,6 +59,7 @@ from litellm.types.utils import (
     Usage,
 )
 from litellm.utils import (
+    _supports_factory,
     add_dummy_tool,
     any_assistant_message_has_thinking_blocks,
     has_tool_call_blocks,
@@ -73,6 +74,7 @@ from ..common_utils import (
     get_anthropic_beta_from_headers,
     get_bedrock_tool_name,
     is_claude_4_5_on_bedrock,
+    strip_bedrock_routing_prefix,
 )
 
 # Computer use tool prefixes supported by Bedrock
@@ -1192,9 +1194,6 @@ class AmazonConverseConfig(BaseConfig):
             + supported_config_params
         )
         inference_params.pop("json_mode", None)  # used for handling json_schema
-        # Anthropic-only key. Bedrock expects `outputConfig` (camelCase) and
-        # will reject `output_config` if it leaks through pass-through routes.
-        inference_params.pop("output_config", None)
 
         # Extract requestMetadata before processing other parameters
         request_metadata = inference_params.pop("requestMetadata", None)
@@ -1204,9 +1203,18 @@ class AmazonConverseConfig(BaseConfig):
         output_config: Optional[OutputConfigBlock] = inference_params.pop(
             "outputConfig", None
         )
-        inference_params.pop(
-            "output_config", None
-        )  # Bedrock Converse doesn't support it
+        # Strip routing prefixes (e.g. ``converse/``) and pass the provider
+        # explicitly so the declarative ``supports_output_config`` flag in
+        # ``model_prices_and_context_window.json`` is actually consulted.
+        # Passing ``custom_llm_provider=None`` would make ``_supports_factory``
+        # silently return False for any model whose name doesn't resolve to a
+        # known provider prefix on its own.
+        if not _supports_factory(
+            model=strip_bedrock_routing_prefix(model),
+            custom_llm_provider="bedrock",
+            key="supports_output_config",
+        ):
+            inference_params.pop("output_config", None)
 
         # keep supported params in 'inference_params', and set all model-specific params in 'additional_request_params'
         additional_request_params = {

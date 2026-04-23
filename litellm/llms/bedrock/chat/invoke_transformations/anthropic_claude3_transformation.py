@@ -18,10 +18,12 @@ from litellm.llms.bedrock.common_utils import (
     get_anthropic_beta_from_headers,
     normalize_tool_input_schema_types_for_bedrock_invoke,
     remove_custom_field_from_tools,
+    strip_bedrock_routing_prefix,
 )
 from litellm.types.llms.anthropic import ANTHROPIC_TOOL_SEARCH_BETA_HEADER
 from litellm.types.llms.openai import AllMessageValues
 from litellm.types.utils import ModelResponse
+from litellm.utils import _supports_factory
 
 if TYPE_CHECKING:
     from litellm.litellm_core_utils.litellm_logging import Logging as _LiteLLMLoggingObj
@@ -169,7 +171,18 @@ class AmazonAnthropicClaudeConfig(AmazonInvokeConfig, AnthropicConfig):
         anthropic_request.pop("model", None)
         anthropic_request.pop("stream", None)
         anthropic_request.pop("output_format", None)
-        anthropic_request.pop("output_config", None)
+        # ``model`` reaches this transformation with an ``invoke/`` routing
+        # prefix (e.g. ``invoke/us.anthropic.claude-opus-4-6-v1``) which is
+        # not a valid provider and makes ``_supports_factory`` silently
+        # return False. Strip the routing prefix and pass the provider
+        # explicitly so the declarative ``supports_output_config`` flag in
+        # ``model_prices_and_context_window.json`` is actually consulted.
+        if not _supports_factory(
+            model=strip_bedrock_routing_prefix(model),
+            custom_llm_provider="bedrock",
+            key="supports_output_config",
+        ):
+            anthropic_request.pop("output_config", None)
         if "anthropic_version" not in anthropic_request:
             anthropic_request["anthropic_version"] = self.anthropic_version
 

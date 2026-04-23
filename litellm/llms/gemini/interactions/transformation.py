@@ -15,6 +15,7 @@ import httpx
 
 from litellm._logging import verbose_logger
 from litellm.litellm_core_utils.core_helpers import process_response_headers
+from litellm.llms.base_llm._url_utils import encode_path_segment
 from litellm.llms.base_llm.interactions.transformation import BaseInteractionsAPIConfig
 from litellm.llms.gemini.common_utils import GeminiError, GeminiModelInfo
 from litellm.types.interactions import (
@@ -205,10 +206,7 @@ class GoogleAIStudioInteractionsConfig(BaseInteractionsAPIConfig):
         resolved_api_base = GeminiModelInfo.get_api_base(api_base)
         if not GeminiModelInfo.get_api_key(litellm_params.api_key):
             raise ValueError("Google API key is required")
-        return (
-            f"{resolved_api_base}/{self.api_version}/interactions/{interaction_id}",
-            {},
-        )
+        return f"{resolved_api_base}/{self.api_version}/interactions/{encode_path_segment(interaction_id)}", {}
 
     def transform_get_interaction_response(
         self,
@@ -238,10 +236,7 @@ class GoogleAIStudioInteractionsConfig(BaseInteractionsAPIConfig):
         resolved_api_base = GeminiModelInfo.get_api_base(api_base)
         if not GeminiModelInfo.get_api_key(litellm_params.api_key):
             raise ValueError("Google API key is required")
-        return (
-            f"{resolved_api_base}/{self.api_version}/interactions/{interaction_id}",
-            {},
-        )
+        return f"{resolved_api_base}/{self.api_version}/interactions/{encode_path_segment(interaction_id)}", {}
 
     def transform_delete_interaction_response(
         self,
@@ -268,10 +263,7 @@ class GoogleAIStudioInteractionsConfig(BaseInteractionsAPIConfig):
         resolved_api_base = GeminiModelInfo.get_api_base(api_base)
         if not GeminiModelInfo.get_api_key(litellm_params.api_key):
             raise ValueError("Google API key is required")
-        return (
-            f"{resolved_api_base}/{self.api_version}/interactions/{interaction_id}:cancel",
-            {},
-        )
+        return f"{resolved_api_base}/{self.api_version}/interactions/{encode_path_segment(interaction_id)}:cancel", {}
 
     def transform_cancel_interaction_response(
         self,

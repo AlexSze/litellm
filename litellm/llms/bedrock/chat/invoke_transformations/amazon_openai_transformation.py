@@ -11,6 +11,7 @@ from typing import TYPE_CHECKING, Any, List, Optional, Tuple, Union
 
 import httpx
 
+from litellm.llms.base_llm._url_utils import encode_path_segment
 from litellm.llms.bedrock.base_aws_llm import BaseAWSLLM
 from litellm.llms.bedrock.common_utils import BedrockError
 from litellm.llms.openai.chat.gpt_transformation import OpenAIGPTConfig
@@ -96,8 +97,12 @@ class AmazonBedrockOpenAIConfig(OpenAIGPTConfig, BaseAWSLLM):
             aws_region_name=aws_region_name,
         )
 
-        # Encode model ID for ARNs (e.g., :imported-model/ -> :imported-model%2F)
+        # Encode model ID for ARNs (e.g., :imported-model/ -> :imported-model%2F).
+        # Non-ARN inputs pass through the ARN helper unchanged, so encode
+        # them as a single path segment for consistency.
         model_id = CommonUtils.encode_bedrock_runtime_modelid_arn(model_id)
+        if "arn:aws:" not in model_id:
+            model_id = encode_path_segment(model_id)
 
         # Build the invoke URL
         if stream:
